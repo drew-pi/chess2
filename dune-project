@@ -5,15 +5,13 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github drew-pi/chess2))
 
-(authors "Author Name")
+(authors "Andrew Piatetsky")
 
-(maintainers "Maintainer Name")
+(maintainers "Andrew Piatetsky")
 
 (license LICENSE)
-
-(documentation https://url/to/documentation)
 
 (package
  (name chess2)
