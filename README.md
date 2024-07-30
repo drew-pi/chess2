@@ -8,7 +8,7 @@ Then clone this repository by running ```git clone git@github.com:drew-pi/chess2
 
 Navigate into the repository ```cd chess2```
 
-Download all of the required dependencies ```opam install .```
+Download all of the required dependencies ```opam install integers ounit2```
 
 Finally, compile and run the game ```dune build && dune exec bin/main.exe```
 
