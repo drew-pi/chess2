@@ -187,7 +187,7 @@ let update_occupancies piece_bb occs =
    in
    let white_occs = white_looper 0 zero in
 
-   (* let () = print_bitboard white_occs in *)
+   let () = print_bitboard white_occs in
 
   let rec black_looper i occ =
     if i > 11 then occ else let () = print_bitboard occ in black_looper (i + 1) (logor piece_bb.(i) occ)
@@ -532,20 +532,20 @@ let rec gen_white_pawn_moves occupancies enpassent bb move_list =
     (* loop over attacks *)
     let capture_moves = attack_looper attacks [] in
 
-   (* let enpass_moves = 
    (* enpassent attack *)
-   if (enpassent > -1) then 
-      let enpassent_attacks = logand pawn_attack_table.(to_side White).(source_square) (set_bit zero enpassent) in
+   let enpass_moves = 
+      if (enpassent > -1) then 
+          let enpassent_attacks = logand pawn_attack_table.(to_side White).(source_square) (set_bit zero enpassent) in
 
-      let target_enpassent = bitscan enpassent_attacks in 
-      (* let () = Printf.printf "Pawn enpassent capture: %s%s\n" (from_coord source_square) (from_coord target_enpassent) in *)
-      let move = encode_move source_square target_enpassent (to_board P) 0 one zero one zero in
-      [move]
-   else 
-      []
-   in *)
+          let target_enpassent = bitscan enpassent_attacks in 
+          (* let () = Printf.printf "Pawn enpassent capture: %s%s\n" (from_coord source_square) (from_coord target_enpassent) in *)
+          let move = encode_move source_square target_enpassent (to_board P) 0 one zero one zero in
+          [move]
+      else 
+          []
+   in
 
-   gen_white_pawn_moves occupancies enpassent (pop_bit bb source_square) (capture_moves @ quiet_moves @ move_list)
+   gen_white_pawn_moves occupancies enpassent (pop_bit bb source_square) (enpass_moves @ capture_moves @ quiet_moves @ move_list)
 
 (** [gen_black_pawn_moves occupancies enpassent bb move_list] generates the
     black pawn moves given a black pawn bitboard *)
@@ -662,20 +662,20 @@ let rec gen_black_pawn_moves occupancies enpassent bb move_list =
     (* loop over attacks *)
     let capture_moves = attack_looper attacks [] in
 
-   (* let enpass_moves = 
+   let enpass_moves = 
    (* enpassent attack *)
-   if (enpassent > -1) then 
-      let enpassent_attacks = logand pawn_attack_table.(to_side Black).(source_square) (set_bit zero enpassent) in
+      if (enpassent > -1) then 
+          let enpassent_attacks = logand pawn_attack_table.(to_side Black).(source_square) (set_bit zero enpassent) in
 
-      let target_enpassent = bitscan enpassent_attacks in 
-      (* let () = Printf.printf "Pawn enpassent capture: %s%s\n" (from_coord source_square) (from_coord target_enpassent) in *)
-      let move = encode_move source_square target_enpassent (to_board Bp) 0 one zero one zero in
-      [move]
-   else 
-      []
-   in *)
+          let target_enpassent = bitscan enpassent_attacks in 
+          (* let () = Printf.printf "Pawn enpassent capture: %s%s\n" (from_coord source_square) (from_coord target_enpassent) in *)
+          let move = encode_move source_square target_enpassent (to_board Bp) 0 one zero one zero in
+          [move]
+      else 
+          []
+   in
    
-   gen_black_pawn_moves occupancies enpassent (pop_bit bb source_square) (capture_moves @ quiet_moves @ move_list)
+   gen_black_pawn_moves occupancies enpassent (pop_bit bb source_square) (enpass_moves @ capture_moves @ quiet_moves @ move_list)
 
 (** [get_white_castle occupancies castling_right move_list] *)
 let get_white_castle occupancies castling_right move_list =
@@ -1154,8 +1154,8 @@ let make_move state move =
     let target_square = get_target_coord move in
     let piece = get_encoded_piece move in
     let promoted = get_promoted_piece move in
-    (* let double = get_double_push move in *)
-    (* let enpass = get_enpassent_move move in *)
+    let double = get_double_push move in
+    let enpass = get_enpassent_move move in
     let castle = get_castle_move move in
 
     let capture = capture_move move in
@@ -1190,8 +1190,7 @@ let make_move state move =
 
                         let () = bitboards.(p) <- pop_bit bitboards.(p) target_square in
                         
-(*                         
-                        let () = print_bitboard bitboards.(p) in
+                        (* let () = print_bitboard bitboards.(p) in
                         let () = Printf.printf "\nend monitoring capture\n" in *)
 
                         true
@@ -1229,40 +1228,40 @@ let make_move state move =
         true
     in
 
-         (* let enpassent_status = 
-            if enpass then 
+      let enpassent_status = 
+        if enpass then 
 
-               let () = 
-               (* remove the pawn that is being captured *)
-               match side with
-                  | White -> bitboards.(0) <- pop_bit bitboards.(0) (target_square - 8) 
-                  | Black ->  bitboards.(6) <- pop_bit bitboards.(6) (target_square + 8)
-                  | _ -> failwith "should be someones turn: empessant status make move error"
-               in 
-               true
-            else
-               false
-         in
+            let () = 
+            (* remove the pawn that is being captured of the opposite side *)
+            match side with
+              | White -> bitboards.(6) <- pop_bit bitboards.(6) (target_square + 8)
+              | Black -> bitboards.(0) <- pop_bit bitboards.(0) (target_square - 8) 
+              | _ -> failwith "should be someones turn: empessant status make move error"
+            in 
+            true
+        else
+            false
+      in
 
-         (* each turn must reset enpassent because only available move after  *)
-         let () = state.enpassent <- ~-1 in *)
+      (* each turn must reset enpassent because only available move after  *)
+      let () = state.enpassent <- ~-1 in
 
 
-         (* let double_push_status = 
-            if double 
-               then 
+      let double_push_status = 
+        if double 
+            then 
 
-                  let () = 
-                  (* create new enpassent square that is available only the next turn *)
-                  match side with
-                     | White -> state.enpassent <- target_square + 8  
-                     | Black ->  state.enpassent <- target_square - 8 
-                     | _ -> failwith "should be someones turn: empessant status make move error"
-                  in 
-                  true
+              let () = 
+              (* create new enpassent square that is available only the next turn *)
+              match side with
+                  | White -> state.enpassent <- target_square + 8  
+                  | Black ->  state.enpassent <- target_square - 8 
+                  | _ -> failwith "should be someones turn: double push status make move error"
+              in 
+              true
 
-               else false
-         in *)
+            else false
+      in
 
     (* takes care of castle - castle status is true if a castle occurs *)
     let castle_status =
@@ -1312,8 +1311,8 @@ let make_move state move =
          (* A few checks to see if the move is legally and correctly constructed *)
          let move_status = if capture_status = capture then true else false in
          let move_status = if promotion_status then (promoted > -1) && move_status else false in
-         (* let move_status = if enpassent_status then enpass && move_status else false in *)
-         (* let move_status = if double_push_status then double && move_status else false in *)
+         let move_status = if enpassent_status then enpass && move_status else false in
+         let move_status = if double_push_status then double && move_status else false in
          let move_status = if castle_status then castle && move_status else false in
 
 
@@ -1321,6 +1320,8 @@ let make_move state move =
          (* capture_status && promotion_status && enpassent_status && double_push_status && castle_status && king_not_checked  *)
             
    in
+
+   let () = print_moves [move] in
 
   (move_status, state)
 
