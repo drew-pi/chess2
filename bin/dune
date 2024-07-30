@@ -1,0 +1,4 @@
+(executable
+ (public_name chess2)
+ (name main)
+ (libraries utils struct str))
