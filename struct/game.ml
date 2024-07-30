@@ -8,7 +8,7 @@ open Rook_attack
 open Slide_attack
 open State
 
-(* castling move in in right update binary decimal
+(* castling move in right update binary decimal
 
    king & rooks didn't move: 1111 & 1111 = 1111 15
 
@@ -187,16 +187,22 @@ let update_occupancies piece_bb occs =
    in
    let white_occs = white_looper 0 zero in
 
-  let rec white_looper i occ =
-    if i > 11 then occ else white_looper (i + 1) (logor piece_bb.(i) occ)
+   (* let () = print_bitboard white_occs in *)
+
+  let rec black_looper i occ =
+    if i > 11 then occ else let () = print_bitboard occ in black_looper (i + 1) (logor piece_bb.(i) occ)
   in
-  let black_occs = white_looper 6 zero in
+  let black_occs = black_looper 6 zero in
+
+  let () = print_bitboard black_occs in
 
    (* set white pieces *)
    let () = occs.(to_side White) <- white_occs in
    let () = occs.(to_side Black) <- black_occs in
    (* let () = occs.(to_side Both) <- logor occs.(to_side White) occs.(to_side Black) in *)
    let () = occs.(to_side Both) <- logor white_occs black_occs in
+
+   let () = print_bitboard occs.(2) in
 
    ()
 
@@ -329,19 +335,87 @@ let setup_tricky () =
 
   state
 
-(* let attacked_square coord side =
+(** [square_attacked coord side game_state] checks to see if [coord] is attacked given a [game_state] *)
+(* let square_attacked coord game_state =
 
-   let w = 0 in let b = 1 in
+  let piece_bitboards = game_state.bitboards in
+  let occupancies = game_state.occupancies in
+  let side = game_state.side in
 
-   (* attacked by white pawn *) if (side = White && not (equal (logand
-   pawn_attack_table.(b).(coord) bitboards.(to_board P)) zero)) then true else
-   (* attacked by black pawn *) if (side = Black && not (equal (logand
-   pawn_attack_table.(w).(coord) bitboards.(to_board Bp)) zero)) then true else
+  (* attacked by white pawn *) 
+  if (side = White && not (equal (logand pawn_attack_table.(to_side Black).(coord) piece_bitboards.(to_board P)) zero)) then true else
+  (* attacked by black pawn *) 
+  if (side = Black && not (equal (logand pawn_attack_table.(to_side White).(coord) piece_bitboards.(to_board Bp)) zero)) then true else
 
-   (* Attacked by knight *) if (side = White)
+  (* Attacked by knight *)
+  let knight_occupancies = 
+    match side with 
+      | White -> piece_bitboards.(to_board N)
+      | Black -> piece_bitboards.(to_board Bn)
+      | _ ->  failwith "Incorrect side information inputted - game.ml/square_attacked"
+  in
 
-   then not (equal (logand knight_attacks.(coord) bitboards.(to_board N)) zero)
-   else *)
+  if (not (equal (logand knight_attack_table.(coord) knight_occupancies) zero)) then true else
+  
+  (* attacked by king*)
+  let king_occupancies = 
+    match side with 
+      | White -> piece_bitboards.(to_board K)
+      | Black -> piece_bitboards.(to_board Bk)
+      | _ ->  failwith "Incorrect side information inputted - game.ml/square_attacked"
+  in
+
+  if (not (equal (logand king_attack_table.(coord) king_occupancies) zero)) then true else
+
+  (* attacked by bishop*)
+  let bishop_occupancies = 
+    match side with 
+      | White -> piece_bitboards.(to_board B)
+      | Black -> piece_bitboards.(to_board Bb)
+      | _ ->  failwith "Incorrect side information inputted - game.ml/square_attacked"
+  in
+
+  if (not (equal (logand (get_bishop_attack coord occupancies.(to_side Both)) bishop_occupancies) zero)) then true else
+
+  (* attacked by rook*)
+  let rook_occupancies = 
+    match side with 
+      | White -> piece_bitboards.(to_board R)
+      | Black -> piece_bitboards.(to_board Br)
+      | _ ->  failwith "Incorrect side information inputted - game.ml/square_attacked"
+  in
+
+  if (not (equal (logand (get_rook_attack coord occupancies.(to_side Both)) rook_occupancies) zero)) then true else
+
+  (* attacked by queen*)
+  let queen_occupancies = 
+    match side with 
+      | White -> piece_bitboards.(to_board Q)
+      | Black -> piece_bitboards.(to_board Bq)
+      | _ ->  failwith "Incorrect side information inputted - game.ml/square_attacked"
+  in
+
+  if (not (equal (logand (get_queen_attack coord occupancies.(to_side Both)) queen_occupancies) zero)) then true else
+
+  false
+ *)
+
+(** [print_board state] print all of the attacks for a given state *)
+(* let print_attacks state =
+
+  (* let side = state.side in let enpassent = state.enpassent in *)
+  let () =
+    for i = 0 to 63 do
+      let r, f = from_coord_rf i in
+      let () = if f = 0 then Printf.printf "\n\t%d   " (8 - r) else () in
+      Printf.printf " %i " (if square_attacked i state then 1 else 0)
+    done
+  in
+  let () = Printf.printf "\n\n\t     a  b  c  d  e  f  g  h\n\n" in
+  () *)
+    
+
+
 
 (** [gen_white_pawn_moves occupancies enpassent bb move_list] generates the
     white pawn moves given a white pawn bitboard *)
@@ -950,8 +1024,10 @@ let rec gen_king_moves occupancies side bb move_list =
       else occupancies.(to_side White)
     in
 
+    (* get the index of the piece *)
     let piece = if side = White then to_board K else to_board Bk in
 
+    (* finds where the king currently is *)
     let source_square = bitscan bb in
 
     (* make sure you are not attacking your own pieces by using a logical not *)
@@ -965,21 +1041,12 @@ let rec gen_king_moves occupancies side bb move_list =
         let move =
           (* quiet move *)
           if not (bit_exists opposing_occupancy target_square) then
-            (* let () = Printf.printf "quiet king move: %s%s\n" (from_coord
-               source_square) (from_coord target_square) in *)
-            let move =
-              encode_move source_square target_square piece 0 zero zero zero
-                zero
-            in
-            move (* capture *)
+            encode_move source_square target_square piece 0 zero zero zero zero
+          (* capture *)
           else
-            (* let () = Printf.printf "king capture: %s%s\n" (from_coord
-               source_square) (from_coord target_square) in *)
-            let move =
-              encode_move source_square target_square piece 0 one zero zero zero
-            in
-            move
+            encode_move source_square target_square piece 0 one zero zero zero
         in
+        (* after each move is checked remove that from the possible move bitboard and check the next one *)
         attacker_loop (pop_bit attack_bb target_square) (move :: moves)
     in
 
@@ -1073,54 +1140,31 @@ let print_moves move_list =
 let make_move state move =
   let state = create_state_deep_copy state in
 
-   let bitboards = state.bitboards in
-   let occupancies = state.occupancies in
-   let side = state.side in
-   (* let enpassent = state.enpassent in *)
-   let castling_right = state.castling_right in
+  let bitboards = state.bitboards in
+  let occupancies = state.occupancies in
+  let side = state.side in
+  (* let enpassent = state.enpassent in *)
+  let castling_right = state.castling_right in
 
   let move_status =
     (* preserve game board*)
 
-         (* parse move *)
-         let source_square = get_source_coord move in
-         let target_square = get_target_coord move in
-         let piece = get_encoded_piece move in
-         let promoted = get_promoted_piece move in
-         (* let double = get_double_push move in *)
-         (* let enpass = get_enpassent_move move in *)
-         let castle = get_castle_move move in
+    (* parse move *)
+    let source_square = get_source_coord move in
+    let target_square = get_target_coord move in
+    let piece = get_encoded_piece move in
+    let promoted = get_promoted_piece move in
+    (* let double = get_double_push move in *)
+    (* let enpass = get_enpassent_move move in *)
+    let castle = get_castle_move move in
 
-         let capture = capture_move move in
+    let capture = capture_move move in
 
 
     let () = bitboards.(piece) <- pop_bit bitboards.(piece) source_square in
     let () = bitboards.(piece) <- set_bit bitboards.(piece) target_square in
 
-         (* let () = if (capture) 
-            then 
-   
-               let () = print_endline "capture initiated" in 
-   
-   
-               let () = for i = 0 to 11 do 
-               let () = Printf.printf "Bitboards" in
-               let () = Printf.printf "%d\n" i in
-               print_bitboard state.bitboards.(i) 
-               done
-               in
-   
-               for i = 0 to 2 do 
-               let () = Printf.printf "Occupations" in
-               let () = Printf.printf "%d\n" i in
-               print_bitboard state.bitboards.(i) 
-               done
-            
-            else ()
-   
-            in *)
-
-         (* take care of capture *)
+         (* take care of capture - capture status is true if a capture occurs *)
          let capture_status =
             if capture then 
 
@@ -1158,10 +1202,13 @@ let make_move state move =
                false 
          in
 
-    (* take care of promotion *)
+    (* take care of promotion - promotion status is true if a promotion occurs*)
     let promotion_status =
+
       (* there is no promotion because a pawn cannot be promoted to a pawn *)
-      if promoted = -1 then false (* there is promotion happening*)
+      if promoted = -1 then false 
+        
+      (* there is promotion happening*)
       else
         (* erase the pawn from the proper bitboard *)
         let () =
@@ -1217,6 +1264,7 @@ let make_move state move =
                else false
          in *)
 
+    (* takes care of castle - castle status is true if a castle occurs *)
     let castle_status =
       if castle then
         let () =
@@ -1226,17 +1274,17 @@ let make_move state move =
               let () = bitboards.(3) <- pop_bit bitboards.(3) (to_coord H1) in
               bitboards.(3) <- set_bit bitboards.(3) (to_coord F1)
           (* white castle queen side - the target square is C1 *)
-          | 2 ->
+          | 58 ->
               let () = bitboards.(3) <- pop_bit bitboards.(3) (to_coord A1) in
               bitboards.(3) <- set_bit bitboards.(3) (to_coord D1)
           (* black castle king side - the target square is G8 *)
-          | 3 ->
+          | 6 ->
               let () = bitboards.(9) <- pop_bit bitboards.(9) (to_coord H8) in
-              bitboards.(9) <- set_bit bitboards.(3) (to_coord F8)
+              bitboards.(9) <- set_bit bitboards.(9) (to_coord F8)
           (* black castle king side - the target square is C8 *)
-          | 4 ->
+          | 2 ->
               let () = bitboards.(9) <- pop_bit bitboards.(9) (to_coord A8) in
-              bitboards.(9) <- set_bit bitboards.(3) (to_coord D8)
+              bitboards.(9) <- set_bit bitboards.(9) (to_coord D8)
           | _ -> failwith "not the correct castling square"
         in
 
@@ -1248,10 +1296,6 @@ let make_move state move =
     let () =
       state.castling_right <-
         logand castling_right (of_int castling_rights.(source_square))
-    in
-    let () =
-      state.castling_right <-
-        logand castling_right (of_int castling_rights.(target_square))
     in
 
     (* update occupancies *)

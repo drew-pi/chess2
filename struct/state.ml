@@ -83,12 +83,18 @@ open Macros
 *)
 
 type game_state = {
-
   bitboards : t array;
 
+
   occupancies : t array;
+    (** An array of length 3
+      - (0) white occupancy
+      - (1) black occupancy
+      - (2) all occupancies
+      *)
 
   mutable side : sides;
+
 
   mutable enpassent : int;
 

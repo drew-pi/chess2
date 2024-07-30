@@ -30,7 +30,6 @@ let create_king_attacks coord =
   logor (logor (logor (logor (logor (logor (logor attack1 attack2) attack3) attack4) attack5) attack6) attack7) attack8
 
 
-
 let init_king_attacks attack_table = 
    let rec init n = 
     if n < 0 then attack_table else

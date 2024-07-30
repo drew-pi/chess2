@@ -93,9 +93,14 @@ let print_board state =
     done
   in
   let () = Printf.printf "\n\n\t     a  b  c  d  e  f  g  h\n\n" in
+
+  let () = Printf.printf "\t Side: %d \n" (to_side state.side) in 
+  let () = Printf.printf "\t En passent: %s \n" (from_coord state.enpassent) in
+  let () = Printf.printf "\t Castle: %i \n\n" (Unsigned.UInt64.to_int state.castling_right) in
+
   ()
-(* let () = Printf.printf "\t Side: %d \n\n" (to_side side) in Printf.printf "\t
-   En passent: %s \n" (from_coord enpassent) *)
+
+
 
 let state = Struct.Game.setup_board ()
 

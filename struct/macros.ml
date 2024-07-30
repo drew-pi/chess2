@@ -601,8 +601,6 @@ let print_bitboard bb =
 
 
 
-
-
 (*
    Misc Tools
 *)

@@ -27,12 +27,12 @@ val bitscan : t -> int
 Uses the Martin Läuter (1997) algorithm to index the first 1 in the integer*)
 
 val encode_move : int -> int -> int -> int -> t -> t -> t -> t -> t
-(** [encode_move source target piece promoted captured double enpassent castling] encodes a move for the computer to understand how change the board 
+(** [encode_move source target piece promoted captured double enpassent castling] encodes a move for the computer to understand how to change the board 
     - [source] is where the piece originates from [0 <= source <= 63]
     - [target] is the target square [0 <= source <= 63]
     - [piece] is the piece that is being described [0 <= piece <= 11]
     - [promoted] is the piece that the promoted pawn will turn into [0 <= piece <= 11] 
-    - [captured], [double], [enpassent], and [castling] are binary, represented by either [UInt64.one] or [UInt64.one]
+    - [captured], [double], [enpassent], and [castling] are binary, represented by either [UInt64.zero] or [UInt64.one]
 *)
 
 val get_source_coord : t -> int
@@ -63,13 +63,13 @@ val wk : t
 (** 0001 white king can castle to the king side *)
 
 val wq : t
-(* 0010 white king can castle to the queen side*)
+(** 0010 white king can castle to the queen side*)
 
 val bk : t
-(* 0100 black king can castle to the king side *)
+(** 0100 black king can castle to the king side *)
 
 val bq : t
-(* 1000 black king can castle to the queen side *)
+(** 1000 black king can castle to the queen side *)
 
 
 
