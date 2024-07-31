@@ -54,9 +54,6 @@ let index = [|
   46; 26; 40; 15; 34; 20; 31; 10; 25; 14; 19; 9; 13; 8; 7; 6
 |]
 
-(** Finds the least significant bit in the integer and returns its index in base 2
-    
-Uses the Martin Läuter (1997) algorithm to index the first 1 in the integer*)
 let bitscan n =
   if equal n zero then
     0 (* No bits are set *)

@@ -14,10 +14,9 @@ val generate_moves : game_state -> t list
 val print_moves : t list -> unit
 (** [print_moves move_list] prints a stylized representation of all of the possible moves given a move list *)
 
-val make_move : game_state -> t -> bool * game_state
+val make_move : game_state -> t -> bool * game_state * game_state
 (** [make_move state move] actually executes the move that is specified and then
-    returns [(bool * state)] where boolean says whether the move is legal or not
-    and state is the new state after the move is executed *)
+    returns [(bool * new_state * old_state)] where [bool] states whether the move is legal or not *)
 
 val eval : game_state -> float
 (** [eval state] is a simple evalution function for a given game state, by

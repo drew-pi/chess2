@@ -5,7 +5,7 @@ open Struct.State
 module type ChessBot = sig
   (* val current_state : game Tree.t ref *)
   val max_depth : int
-  val generate_successor : game_state -> Unsigned.UInt64.t -> bool * game_state
+  val generate_successor : game_state -> Unsigned.UInt64.t -> bool * game_state * game_state
   val eval_function : game_state -> float
   val get_action : game_state -> Unsigned.UInt64.t option
 end

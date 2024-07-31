@@ -12,18 +12,18 @@ let white_or_black_tile coord =
 (** Converts bitboard index into piece string *)
 let string_of_piece piece coord =
   match piece with
-  | 0 -> "\u{265F}" (* White Pawn *)
-  | 1 -> "\u{265E}" (* White Knight *)
-  | 2 -> "\u{265D}" (* White Bishop *)
-  | 3 -> "\u{265C}" (* White Rook *)
-  | 4 -> "\u{265B}" (* White Queen *)
-  | 5 -> "\u{265A}" (* White King *)
-  | 6 -> "\u{2659}" (* Black Pawn *)
-  | 7 -> "\u{2658}" (* Black Knight *)
-  | 8 -> "\u{2657}" (* Black Bishop *)
-  | 9 -> "\u{2656}" (* Black Rook *)
-  | 10 -> "\u{2655}" (* Black Queen *)
-  | 11 -> "\u{2654}" (* Black King *)
+  | 0 -> "\u{2659}" (* Black Pawn *)
+  | 1 -> "\u{2658}" (* Black Knight *)
+  | 2 -> "\u{2657}" (* Black Bishop *)
+  | 3 -> "\u{2656}" (* Black Rook *)
+  | 4 -> "\u{2655}" (* Black Queen *)
+  | 5 -> "\u{2654}" (* Black King *)
+  | 6 -> "\u{265F}" (* White Pawn *)
+  | 7 -> "\u{265E}" (* White Knight *)
+  | 8 -> "\u{265D}" (* White Bishop *)
+  | 9 -> "\u{265C}" (* White Rook *)
+  | 10 -> "\u{265B}" (* White Queen *)
+  | 11 -> "\u{265A}" (* White King *)
   | _ -> white_or_black_tile coord
 
 (** Displays the rules of chess *)
@@ -102,7 +102,9 @@ let print_board state =
 
 
 
-let state = Struct.Game.setup_board ()
+(* let state = Struct.Game.setup_board () *)
+let state = Struct.Game.setup_tricky ()
+
 
 (* let () = for i = 0 to 11 do let () = Printf.printf "Bitboards" in let () =
    Printf.printf "%d\n" i in print_bitboard state.bitboards.(i) done
@@ -181,7 +183,13 @@ let rec run_two_player state =
 
     (* selected move *)
     let move = handle_input moves in
-    let _, new_state = Struct.Game.make_move state move in
+    let (legal, new_state, _) = Struct.Game.make_move state move in
+
+    if not legal then (
+      Printf.printf
+        "You cannot move there, the king will be in check \n";
+         run_two_player state) 
+    else
 
     run_two_player new_state
   with Failure f ->
@@ -240,11 +248,11 @@ let rec run_single_player state =
       (* selected move *)
       let move = handle_input moves in
       let () = Struct.Game.print_moves [ move ] in
-      let _, new_state = Struct.Game.make_move state move in
+      let _, new_state, _ = Struct.Game.make_move state move in
 
       run_single_player new_state
     else
-      let _, new_state =
+      let _, new_state, _ =
         match ChessBot.get_action state with
         | None -> failwith "BAD ACTION!"
         | Some move ->

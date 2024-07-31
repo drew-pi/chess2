@@ -3,7 +3,8 @@ open Macros
 
 type game_state = {
 
-  (* [bitboards] holds all of the piece information. It has length [12] and maps to the pieces with the following
+  bitboards : t array;
+    (** [bitboards] holds all of the piece information. It has length [12] and maps to the pieces with the following
     - white Pawn 0
     - white kNight 1
     - white Bishop 2
@@ -17,23 +18,22 @@ type game_state = {
     - Black queen 10
     - Black king 11
  *)
-  bitboards : t array;
 
-  (* [occupancies] holds all of general bitboards - including only black pieces, only white pieces and both black and white pieces 
+  occupancies : t array;
+    (** [occupancies] holds all of general bitboards - including only black pieces, only white pieces and both black and white pieces 
     - white occupancy 0
     - black occupancy 1 
     - both occupancy 2
   *)
-  occupancies : t array;
 
-  (* [side] defines whos turn it is. [Neither] by default, but after initialization only [White] or [Black]*)
   mutable side : sides;
+  (** [side] defines whos turn it is. [Neither] by default, but after initialization only [White] or [Black]*)
 
-  (* [enpassent] holds the coordinate for where a possible enpassent may occur*)
   mutable enpassent : int;
+  (** [enpassent] holds the coordinate for where a possible enpassent may occur*)
 
-
-  (* [castling_right] holds all of the castling rights for this board, uses the below mapping to encode this
+  mutable castling_right : t;
+    (** [castling_right] holds all of the castling rights for this board, uses the below mapping to encode this
     
     bin  dec
       
@@ -50,9 +50,7 @@ type game_state = {
     1111       both sides an castle both directions
 
     1001       black king => queen side and white king => king side
-  
   *)
-  mutable castling_right : t;
 
 }
 

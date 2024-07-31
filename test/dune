@@ -1,3 +1,4 @@
 (test
  (name test_chess)
- (libraries ounit2 utils struct))
+ (libraries ounit2 utils struct)
+ (instrumentation (backend bisect_ppx)))

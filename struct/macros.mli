@@ -22,7 +22,7 @@ val popcount : t -> int
 *)
 
 val bitscan : t -> int
-(** Finds the least significant bit in the integer and returns its index in base 2
+(** Finds the least significant bit in the integer and returns its index in base 10
     
 Uses the Martin Läuter (1997) algorithm to index the first 1 in the integer*)
 

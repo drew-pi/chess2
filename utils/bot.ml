@@ -22,7 +22,7 @@ let rec minimax_alpha_beta eval_function state current_player depth alpha beta =
         List.iter
           (fun new_move ->
             if !still_searching then (
-              let _, successor = make_move copy new_move in
+              let _, successor, _ = make_move copy new_move in
               value :=
                 max !value
                   (minimax_alpha_beta eval_function successor
@@ -52,7 +52,7 @@ let rec minimax_alpha_beta eval_function state current_player depth alpha beta =
         List.iter
           (fun new_move ->
             if !still_searching then (
-              let _, successor = make_move copy new_move in
+              let _, successor, _ = make_move copy new_move in
               value :=
                 min !value
                   (minimax_alpha_beta eval_function successor
@@ -70,7 +70,7 @@ let rec minimax_alpha_beta eval_function state current_player depth alpha beta =
 module type ChessBot = sig
   (* val current_state : game Tree.t ref *)
   val max_depth : int
-  val generate_successor : game_state -> Unsigned.UInt64.t -> bool * game_state
+  val generate_successor : game_state -> Unsigned.UInt64.t -> bool * game_state * game_state
   val eval_function : game_state -> float
   val get_action : game_state -> Unsigned.UInt64.t option
 end
@@ -105,7 +105,7 @@ module InitBotWithSettings (Settings : BotSettings) = struct
       if List.is_empty possible_moves then print_endline "NO LEGAL ACTIONS";
 
       let evaluate_move move =
-        let _, successor =
+        let _, successor, _ =
           make_move (Struct.State.create_state_deep_copy state) move
         in
         minimax_alpha_beta eval_function successor Struct.Macros.White

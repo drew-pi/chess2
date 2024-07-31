@@ -647,7 +647,7 @@ let bot_tests =
                choose_randomly (generate_moves !current_state_ref)
              in
              (*Black Side*)
-             let _, state_after_max_moves =
+             let _, state_after_max_moves, _ =
                make_move !current_state_ref player_move
              in
              (*Score change for max agent*)
@@ -656,7 +656,7 @@ let bot_tests =
              let black_action_opt = TestBot.get_action state_after_max_moves in
              let black_action = get_action_or_fail black_action_opt in
              (*White side*)
-             let _, state_after_min_moves =
+             let _, state_after_min_moves, _ =
                make_move state_after_max_moves black_action
              in
 
