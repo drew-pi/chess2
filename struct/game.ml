@@ -296,7 +296,134 @@ let setup_tricky () =
 
   state
 
-(** [king_in_check game_state] returns true if the king is in check, false otherwise *)
+let enpassent_mate () = 
+
+  let state = create_state_deep_copy default_state in
+
+  let bitboards = state.bitboards in
+  let occupancies = state.occupancies in
+
+  (* setup white pawns *)
+  let () = bitboards.(to_board P) <- of_string "20706071827972096" in
+
+  (* setup white knights *)
+  let () = bitboards.(to_board N) <- of_string "18014398517870592" in
+
+  (* setup white bishops *)
+  let () = bitboards.(to_board B) <- of_string "1688849860263936" in
+
+  (* setup white rooks *)
+  let () = bitboards.(to_board R) <- of_string "2305843009213694464" in
+
+  (* setup white queens *)
+  let () = bitboards.(to_board Q) <- of_string "1073741824" in
+
+  (* setup white kings *)
+  let () = bitboards.(to_board K) <- of_string "4611686018427387904" in
+
+  (* BLACK PIECES *)
+
+  (* setup black pawns *)
+  let () = bitboards.(to_board Bp) <- of_string "323526656" in
+
+  (* setup black knights *)
+  let () = bitboards.(to_board Bn) <- of_string "8657043456" in
+
+  (* setup black bishops *)
+  let () = bitboards.(to_board Bb) <- of_string "4294967328" in
+
+  (* setup black rooks *)
+  let () = bitboards.(to_board Br) <- of_string "9" in
+
+  (* setup black queens *)
+  let () = bitboards.(to_board Bq) <- of_string "4" in
+
+  (* setup black kings *)
+  let () = bitboards.(to_board Bk) <- of_string "16384" in
+
+  (* SETTING OCCUPANCIES *)
+  let () = update_occupancies bitboards occupancies in
+
+  (* SETTING OTHERs *)
+  let () = state.castling_right <- of_int 0 in
+
+  let () = state.side <- White in
+
+  let () = state.enpassent <- 20 in
+
+  state
+
+let crazy_mate () = 
+
+  let state = create_state_deep_copy default_state in
+
+  let bitboards = state.bitboards in
+  let occupancies = state.occupancies in
+
+  (* setup white pawns *)
+  let () = bitboards.(to_board P) <- of_string "2048" in
+
+  (* setup white knights *)
+  let () = bitboards.(to_board N) <- of_string "34359738496" in
+
+  (* setup white bishops *)
+  let () = bitboards.(to_board B) <- of_string "70368752566338" in
+
+  (* setup white rooks *)
+  let () = bitboards.(to_board R) <- of_string "1152921506754330880" in
+
+  (* setup white queens *)
+  let () = bitboards.(to_board Q) <- of_string "17592186175488" in
+
+  (* setup white kings *)
+  let () = bitboards.(to_board K) <- of_string "140737488355328" in
+
+  (* BLACK PIECES *)
+
+  (* setup black pawns *)
+  let () = bitboards.(to_board Bp) <- of_string "562949953421312" in
+
+  (* setup black knights *)
+  let () = bitboards.(to_board Bn) <- of_string "0" in
+
+  (* setup black bishops *)
+  let () = bitboards.(to_board Bb) <- of_string "9367487242110500868" in
+
+  (* setup black rooks *)
+  let () = bitboards.(to_board Br) <- of_string "4611686018427420672" in
+
+  (* setup black queens *)
+  let () = bitboards.(to_board Bq) <- of_string "288230376420147200" in
+
+  (* setup black kings *)
+  let () = bitboards.(to_board Bk) <- of_string "4096" in
+
+  (* SETTING OCCUPANCIES *)
+  let () = update_occupancies bitboards occupancies in
+
+  (* SETTING OTHERs *)
+  let () = state.castling_right <- of_int 0 in
+
+  let () = state.side <- White in
+
+  let () = state.enpassent <- ~-1 in
+
+  state  
+
+let print_moves move_list = 
+  let () = Printf.printf "  index  source  target  piece  promoted  captured  double  enpassent  castling\n" in
+  let rec printer counter = function
+  | [] -> ()
+  | h :: t -> 
+      let () = Printf.printf "   %d      %s      %s      %s      %s          %s    %s       %s    %s \n" counter (from_coord (get_source_coord h)) 
+      (from_coord (get_target_coord h)) (to_piece (get_encoded_piece h)) 
+      (to_piece (get_promoted_piece h)) (string_of_bool (capture_move h)) (string_of_bool (get_double_push h))
+      (string_of_bool (get_enpassent_move h)) (string_of_bool (get_castle_move h)) in
+      printer (counter+1) t
+  in 
+  printer 0 move_list
+ 
+
 let king_in_check game_state =
 
   let piece_bitboards = game_state.bitboards in
@@ -480,11 +607,12 @@ let rec gen_white_pawn_moves occupancies enpassent bb move_list =
 
    (* enpassent attack *)
    let enpass_moves = 
-      if (enpassent > -1) then 
-          let enpassent_attacks = logand pawn_attack_table.(to_side White).(source_square) (set_bit zero enpassent) in
+
+      let enpassent_attacks = logand pawn_attack_table.(to_side White).(source_square) (set_bit zero enpassent) in
+      if (enpassent > -1 && not (equal enpassent_attacks zero)) then  
 
           let target_enpassent = bitscan enpassent_attacks in 
-          (* let () = Printf.printf "Pawn enpassent capture: %s%s\n" (from_coord source_square) (from_coord target_enpassent) in *)
+          
           let move = encode_move source_square target_enpassent (to_board P) 0 one zero one zero in
           [move]
       else 
@@ -610,17 +738,18 @@ let rec gen_black_pawn_moves occupancies enpassent bb move_list =
 
    let enpass_moves = 
    (* enpassent attack *)
-      if (enpassent > -1) then 
-          let enpassent_attacks = logand pawn_attack_table.(to_side Black).(source_square) (set_bit zero enpassent) in
+
+      let enpassent_attacks = logand pawn_attack_table.(to_side Black).(source_square) (set_bit zero enpassent) in
+      if (enpassent > -1 && not (equal enpassent_attacks zero)) then 
 
           let target_enpassent = bitscan enpassent_attacks in 
-          (* let () = Printf.printf "Pawn enpassent capture: %s%s\n" (from_coord source_square) (from_coord target_enpassent) in *)
+
           let move = encode_move source_square target_enpassent (to_board Bp) 0 one zero one zero in
           [move]
       else 
           []
    in
-   
+
    gen_black_pawn_moves occupancies enpassent (pop_bit bb source_square) (enpass_moves @ capture_moves @ quiet_moves @ move_list)
 
 (** [get_white_castle occupancies castling_right move_list] *)
@@ -1001,88 +1130,6 @@ let rec gen_king_moves occupancies side bb move_list =
     gen_king_moves occupancies side (pop_bit bb source_square)
       (moves @ move_list)
 
-let generate_moves state =
-  let bitboards = state.bitboards in
-  let occupancies = state.occupancies in
-  let enpass = state.enpassent in
-  let castle_right = state.castling_right in
-  let side = state.side in
-
-  let move_list =
-    if side = White then
-      let move_list =
-        gen_white_pawn_moves occupancies enpass bitboards.(0) []
-      in
-
-      let move_list = get_white_castle occupancies castle_right move_list in
-
-      let move_list =
-        gen_knight_moves occupancies White bitboards.(1) move_list
-      in
-
-      let move_list =
-        gen_bishop_moves occupancies White bitboards.(2) move_list
-      in
-
-      let move_list =
-        gen_rook_moves occupancies White bitboards.(3) move_list
-      in
-
-      let move_list =
-        gen_queen_moves occupancies White bitboards.(4) move_list
-      in
-
-      let move_list =
-        gen_king_moves occupancies White bitboards.(5) move_list
-      in
-
-      move_list
-    else
-      let move_list =
-        gen_black_pawn_moves occupancies enpass bitboards.(6) []
-      in
-
-      let move_list = get_black_castle occupancies castle_right move_list in
-
-      let move_list =
-        gen_knight_moves occupancies Black bitboards.(7) move_list
-      in
-
-      let move_list =
-        gen_bishop_moves occupancies Black bitboards.(8) move_list
-      in
-
-      let move_list =
-        gen_rook_moves occupancies Black bitboards.(9) move_list
-      in
-
-      let move_list =
-        gen_queen_moves occupancies Black bitboards.(10) move_list
-      in
-
-      let move_list =
-        gen_king_moves occupancies Black bitboards.(11) move_list
-      in
-
-      move_list
-  in
-
-  move_list
-
-let print_moves move_list = 
-   let () = Printf.printf "  index  source  target  piece  promoted  captured  double  enpassent  castling\n" in
-   let rec printer counter = function
-   | [] -> ()
-   | h :: t -> 
-      let () = Printf.printf "   %d      %s      %s      %s      %s          %s    %s       %s    %s \n" counter (from_coord (get_source_coord h)) 
-      (from_coord (get_target_coord h)) (to_piece (get_encoded_piece h)) 
-      (to_piece (get_promoted_piece h)) (string_of_bool (capture_move h)) (string_of_bool (get_double_push h))
-      (string_of_bool (get_enpassent_move h)) (string_of_bool (get_castle_move h)) in
-      printer (counter+1) t
-   in 
-   printer 0 move_list
-
-
 let make_move state move =
   let new_state = create_state_deep_copy state in
 
@@ -1247,18 +1294,97 @@ let make_move state move =
     if side = White then new_state.side <- Black else new_state.side <- White
   in
 
-  let () = print_moves [move] in
-
   (move_status, new_state, state)
 
 
+let filter_psuedolegal_moves pmoves state = 
+  let rec filterer pmoves legal_moves = 
+    match pmoves with
+    | [] -> legal_moves
+    | h :: t -> let legal, _, _ = make_move state h in if legal then filterer t (h :: legal_moves) else filterer t legal_moves
+  in filterer pmoves []
+
+let generate_moves state =
+    let bitboards = state.bitboards in
+    let occupancies = state.occupancies in
+    let enpass = state.enpassent in
+    let castle_right = state.castling_right in
+    let side = state.side in
+  
+    let move_list =
+      if side = White then
+        let move_list =
+          gen_king_moves occupancies White bitboards.(5) []
+        in
+
+        let move_list = get_white_castle occupancies castle_right move_list in
+  
+        let move_list =
+          gen_knight_moves occupancies White bitboards.(1) move_list
+        in
+  
+        let move_list =
+          gen_bishop_moves occupancies White bitboards.(2) move_list
+        in
+  
+        let move_list =
+          gen_rook_moves occupancies White bitboards.(3) move_list
+        in
+
+        let move_list =
+          gen_white_pawn_moves occupancies enpass bitboards.(0) move_list
+        in
+  
+        let move_list =
+          gen_queen_moves occupancies White bitboards.(4) move_list
+        in
+
+        move_list
+      else
+
+        let move_list =
+          gen_king_moves occupancies Black bitboards.(11) []
+        in
+
+        let move_list = get_black_castle occupancies castle_right move_list in
+  
+        let move_list =
+          gen_knight_moves occupancies Black bitboards.(7) move_list
+        in
+  
+        let move_list =
+          gen_bishop_moves occupancies Black bitboards.(8) move_list
+        in
+  
+        let move_list =
+          gen_rook_moves occupancies Black bitboards.(9) move_list
+        in
+
+        let move_list =
+          gen_black_pawn_moves occupancies enpass bitboards.(6) move_list
+        in
+  
+        let move_list =
+          gen_queen_moves occupancies Black bitboards.(10) move_list
+        in
+  
+        move_list
+    in
+    move_list
+
+let generate_legal_moves state = 
+  (* generate all psuedo legal moves *)
+  let psuedo_legal = generate_moves state in
+  (* filter*)
+  filter_psuedolegal_moves psuedo_legal state
+    
 let eval state =
   let p = 100 in
   let n = 320 in
   let b = 330 in
   let r = 500 in
   let q = 900 in
-  let k = 20000 in
+  (* let k = 20000 in *)
 
   (* evaluate white position *)
   let white_pos = 0 in
@@ -1268,7 +1394,7 @@ let eval state =
   let white_pos = white_pos + (popcount state.bitboards.(to_board B) * b) in
   let white_pos = white_pos + (popcount state.bitboards.(to_board R) * r) in
   let white_pos = white_pos + (popcount state.bitboards.(to_board Q) * q) in
-  let white_pos = white_pos + (popcount state.bitboards.(to_board K) * k) in
+  (* let white_pos = white_pos + (popcount state.bitboards.(to_board K) * k) in *)
 
   (* evaluate black position *)
   let black_pos = 0 in
@@ -1278,9 +1404,13 @@ let eval state =
   let black_pos = black_pos + (popcount state.bitboards.(to_board Bb) * b) in
   let black_pos = black_pos + (popcount state.bitboards.(to_board Br) * r) in
   let black_pos = black_pos + (popcount state.bitboards.(to_board Bq) * q) in
-  let black_pos = black_pos + (popcount state.bitboards.(to_board Bk) * k) in
+  (* let black_pos = black_pos + (popcount state.bitboards.(to_board Bk) * k) in *)
 
-   float_of_int (white_pos - black_pos)
+  float_of_int (white_pos - black_pos)
+
+
+let check_reason_gameover game_state = 
+  if king_in_check game_state then Checkmate else Stalemate
 
 
 

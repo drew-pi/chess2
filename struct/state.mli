@@ -52,6 +52,12 @@ type game_state = {
     1001       black king => queen side and white king => king side
   *)
 
+  mutable game_over : bool;
+  (** [game_over] is true when the game ends for a number of different reasons *)
+
+  mutable end_reason : reason;
+  (** [end_reason] is a specific circumstance that occured which caused the game to end *)
+
 }
 
 val default_state : game_state

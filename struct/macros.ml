@@ -576,6 +576,13 @@ type pieces =
   | Queen
 
 
+type reason = 
+  | Checkmate
+  | Stalemate
+  | FiftyMoves
+  | InsufficientMaterial
+  | Repetition
+  | GameInProgress
 
 
 (* bitboard representation *)

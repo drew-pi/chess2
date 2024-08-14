@@ -1,21 +1,25 @@
-(* open Chess.Game *)
 open Struct.State
 
-(**Module type representing a chess bot.*)
+(** Module type representing a chess bot *)
 module type ChessBot = sig
-  (* val current_state : game Tree.t ref *)
   val max_depth : int
-  val generate_successor : game_state -> Unsigned.UInt64.t -> bool * game_state * game_state
+  (** [max_depth] is an odd number that controls how deep the minmax algorithm searches into the game tree *)
+
+  val make_move : game_state -> Unsigned.UInt64.t -> bool * game_state * game_state
+  (** [make_move game_state move] is the mechanism of making a move. The new game_state that it returns must switch player turns automatically  *)
+
   val eval_function : game_state -> float
-  val get_action : game_state -> Unsigned.UInt64.t option
+  (** [eval_function state] returns a static number which determines how good of a position the two players are in *)
+  
+  val get_next_move : game_state -> Unsigned.UInt64.t
+  (** [get_next_move state] returns the next move which the player should make. Uses the alpha-beta pruning minmax algorithm to determine which move is the best *)
 end
 
+(** Module to define settings for the agent*)
 module type BotSettings = sig
-  val max_depth : int
-  (**Difficulty of the Bot (Easy, Medium, Hard).*)
 
-  val eval_function : game_state -> float
-  (**[eval_fctn game_state] scores the current game state.*)
+  val max_depth : int
+
 end
 
 module InitBotWithSettings : functor (_ : BotSettings) -> ChessBot

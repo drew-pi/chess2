@@ -1,133 +1,110 @@
-(* open Chess.Game *)
 open Struct.Game
 open Struct.State
 
 (* Enhanced minimax function with alpha-beta pruning *)
-let rec minimax_alpha_beta eval_function state current_player depth alpha beta =
-  if depth <= 0 (*|| game.is_terminal*) then eval_function state
+let rec minimax_alpha_beta eval_function state depth alpha beta =
+  if depth <= 0 then (eval_function state, None)
   else
     let copy = create_state_deep_copy state in
-    if current_player = Struct.Macros.White then (
-      (* Maximizing player *)
-      let value = ref Float.neg_infinity in
 
-      (* get all of the possible moves from a given position - may not be legal
-         because king might still be in check *)
-      let possible_moves = generate_moves state in
+    (* generate psuedo legal moves - can capture king *)
+    (* let possible_moves = generate_moves state in  *)
+    let possible_moves = generate_legal_moves state in
 
-      let still_searching = ref true in
-      let i = ref 0 in
+    (* Maximizing player *)
+    if state.side = Struct.Macros.White then
 
-      while !still_searching && !i < List.length possible_moves do
-        List.iter
-          (fun new_move ->
-            if !still_searching then (
-              let _, successor, _ = make_move copy new_move in
-              value :=
-                max !value
-                  (minimax_alpha_beta eval_function successor
-                     Struct.Macros.Black (depth - 1) alpha beta);
-              alpha := max !alpha !value;
-              if beta <= alpha then still_searching := false))
-          possible_moves;
-        incr i
-      done;
-      !value)
-    else
-      (* Minimizing player *)
-      let value = ref Float.infinity in
+      (* if checkmate end the evaluation of branches of this move and return a very low evalution score for maximizing player *)
+      if ((List.length possible_moves = 0) && (king_in_check copy)) then ((-500000.), None) else
 
-      let possible_moves = generate_moves state in
+      (* the best possible move, set it to negitive infinity because anything will be larger than this number *)
+      let best_move_white = ref (Float.neg_infinity, None) in
 
-      (* let () = Printf.printf "This is the maximizing players moves\n\n\n\n"
-         in let () = Struct.Game.print_board state in let () = Printf.printf "It
-         is player %d move\n" (Struct.Macros.to_side Black) in let () =
-         Struct.Game.print_moves possible_moves in let () = Printf.printf "
-         possible moves = actual possible moves %b \n" (generate_moves state =
-         possible_moves) in let () = Printf.printf "\nEnd of maximizing players
-         moves\n\n\n\n\n" in *)
-      let still_searching = ref true in
-      let i = ref 0 in
-      while !still_searching && !i < List.length possible_moves do
-        List.iter
-          (fun new_move ->
-            if !still_searching then (
-              let _, successor, _ = make_move copy new_move in
-              value :=
-                min !value
-                  (minimax_alpha_beta eval_function successor
-                     Struct.Macros.White (depth - 1) alpha beta);
-              beta := min !beta !value;
-              if beta <= alpha then still_searching := false))
-          possible_moves;
-        incr i
-      done;
-      !value
+      let rec maximizing_move_iter alpha beta = function 
+        | [] -> !best_move_white
+        | move :: moves -> 
+          let _, new_state, _ = make_move copy move in
+          let value, _ = minimax_alpha_beta eval new_state (depth-1) alpha beta in
 
+          (* Check to see if this move maximizes the evaluation function more than all previous moves *)
+          let () = if (value > fst !best_move_white) then best_move_white := (value, Some move) else () in
+
+          (* if the value is smaller than alpha than found our move and must exit out of the loop *)
+          if (value >= beta) then 
+            !best_move_white else
+
+          (* alpha becomes the max value of value and the previous alpha *)
+          maximizing_move_iter (max value alpha) beta moves
+        
+        in maximizing_move_iter alpha beta possible_moves 
+    
+    (* Minimizing player *)
+    else 
+
+      (* if checkmate end the evaluation of branches of this move and return a very low evalution score for minimizing   player *)
+      if ((List.length possible_moves = 0) && (king_in_check copy)) then ((500000.), None) else
+
+      let best_move_black = ref (Float.infinity, None) in
+
+      let rec minimizing_move_iter alpha beta = function 
+      | [] -> !best_move_black
+      | move :: moves -> 
+        let _, new_state, _ = make_move copy move in
+        let value, _ = minimax_alpha_beta eval new_state (depth-1) alpha beta in
+
+        (* Check to see if this move minimizes the evaluation function more than all previous moves *)
+        let () = if (value < fst !best_move_black) then best_move_black := (value, Some move) else () in
+
+        (* if the value is smaller than alpha than found our move and must exit out of the loop *)
+        if (value <= alpha) then !best_move_black else
+        
+        (* beta becomes the minimum value of value and the previous beta *)
+        minimizing_move_iter alpha (min value beta)  moves
+      
+      in minimizing_move_iter alpha beta possible_moves
 (* end min max beta pruning algorithm *)
 
-(**Module for a Chess Agent*)
+
+
+
+
+(** Module for a Chess Agent*)
 module type ChessBot = sig
-  (* val current_state : game Tree.t ref *)
   val max_depth : int
-  val generate_successor : game_state -> Unsigned.UInt64.t -> bool * game_state * game_state
+  (** [max_depth] is an odd number that controls how deep the minmax algorithm searches into the game tree *)
+
+  val make_move : game_state -> Unsigned.UInt64.t -> bool * game_state * game_state
+  (** [make_move game_state move] is the mechanism of making a move. The new game_state that it returns must switch player turns automatically  *)
+
   val eval_function : game_state -> float
-  val get_action : game_state -> Unsigned.UInt64.t option
+  (** [eval_function state] returns a static number which determines how good of a position the two players are in *)
+  
+  val get_next_move : game_state -> Unsigned.UInt64.t
+  (** [get_next_move state] returns the next move which the player should make. Uses the alpha-beta pruning minmax algorithm to determine which move is the best *)
 end
 
-(**Module to define settings for the agent*)
+(** Module to define settings for the agent*)
 module type BotSettings = sig
   val max_depth : int
   (**The maximum depth for the bot in the minimax call.*)
-
-  val eval_function : game_state -> float
-  (**[eval_fctn game_state] scores the current game state.*)
 end
 
 (*Create ChessAgent from settings*)
 module InitBotWithSettings (Settings : BotSettings) = struct
-  (* let current_state = ref Settings.start_state *)
   let max_depth = Settings.max_depth
-  let eval_function = Settings.eval_function
+  let eval_function = Struct.Game.eval
 
-  (*generate a successor state*)
-  let generate_successor state move =
+  let make_move state move =
     make_move (create_state_deep_copy state) move
 
-  let get_action state =
-    if state.side = White then
-      failwith "Cannot get action when it is not bot's turn"
-    else
-      let possible_moves = generate_moves state in
+  let get_next_move state = 
+    (* let _, best_move = minimax_alpha_beta eval_function state max_depth (ref Float.neg_infinity) (ref Float.infinity) in *)
+    let _, best_move = minimax_alpha_beta eval_function state max_depth Float.neg_infinity Float.infinity in
 
-      (* let () = List.iter (fun state -> print_endline
-         (Unsigned.UInt64.to_string state)) possible_moves in *)
-      if List.is_empty possible_moves then print_endline "NO LEGAL ACTIONS";
 
-      let evaluate_move move =
-        let _, successor, _ =
-          make_move (Struct.State.create_state_deep_copy state) move
-        in
-        minimax_alpha_beta eval_function successor Struct.Macros.White
-          (max_depth - 1) (ref Float.infinity) (ref Float.neg_infinity)
-      in
-      let failure_case =
-        (Unsigned.UInt64.of_int (int_of_float Float.infinity), Float.infinity)
-      in
-      let actions_with_scores =
-        List.map
-          (fun action ->
-            try (action, evaluate_move action) with Failure _ -> failure_case)
-          possible_moves
-      in
-      let best_move, _ =
-        List.fold_left
-          (fun (best_move, best_score) (move, score) ->
-            if score < best_score then (Some move, score)
-            else (best_move, best_score))
-          (None, Float.infinity) actions_with_scores
-      in
-      best_move
+    match best_move with 
+    | None -> failwith "An error occured and the bot could not find the next move"
+    | Some m -> m
 
   (* end functor *)
 end

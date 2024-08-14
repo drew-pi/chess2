@@ -178,6 +178,14 @@ type pieces =   | Pawn
 | Queen
 (** Representation of the different pieces in chess - primarily for bishop, rook and queen attacks *)
 
+type reason = | Checkmate
+| Stalemate
+| FiftyMoves
+| InsufficientMaterial
+| Repetition
+| GameInProgress
+(** Possible reasons for why the game ended *)
+
 val print_bitboard : t -> unit
 (** A visual representation of a u64int as a chess board *)
 

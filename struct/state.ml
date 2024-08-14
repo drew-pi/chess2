@@ -85,20 +85,17 @@ open Macros
 type game_state = {
   bitboards : t array;
 
-
   occupancies : t array;
-    (** An array of length 3
-      - (0) white occupancy
-      - (1) black occupancy
-      - (2) all occupancies
-      *)
 
   mutable side : sides;
-
 
   mutable enpassent : int;
 
   mutable castling_right : t;
+
+  mutable game_over : bool;
+
+  mutable end_reason : reason;
 
 }
 
@@ -108,6 +105,8 @@ let default_state = {
   side = Neither;
   enpassent = ~-1;
   castling_right = zero;
+  game_over = false;
+  end_reason = GameInProgress;
 }
 
 
@@ -117,6 +116,8 @@ let create_state_deep_copy state = {
   side = state.side;
   enpassent = state.enpassent;
   castling_right = state.castling_right;
+  game_over = state.game_over;
+  end_reason = state.end_reason
 }
 
 

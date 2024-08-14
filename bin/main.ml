@@ -102,15 +102,10 @@ let print_board state =
 
 
 
-(* let state = Struct.Game.setup_board () *)
-let state = Struct.Game.setup_tricky ()
+(* let state = Struct.Game.crazy_mate () *)
+(* let state = Struct.Game.enpassent_mate () *)
+let state = Struct.Game.setup_board ()
 
-
-(* let () = for i = 0 to 11 do let () = Printf.printf "Bitboards" in let () =
-   Printf.printf "%d\n" i in print_bitboard state.bitboards.(i) done
-
-   let () = for i = 0 to 2 do let () = Printf.printf "Occupations" in let () =
-   Printf.printf "%d\n" i in print_bitboard state.bitboards.(i) done *)
 
 let bot_activated =
   if Array.length Sys.argv < 2 || Sys.argv.(1) <> "bot" then false else true
@@ -125,6 +120,37 @@ let rec get_move source target = function
   | h :: t ->
       if get_source_coord h = source && get_target_coord h = target then Some h
       else get_move source target t
+
+(** [print_styled_message message] formats the gameover message *)
+let print_styled_message message =
+  (* let padding_lines = String.make 10 ' ' in *)
+  let empty_line = "*" ^ String.make (String.length message + 40) ' ' ^ "*" in
+  let border = String.make (String.length message + 42) '*' in
+  let padding_left = String.make 20 ' ' in
+  let padding_right = String.make 20 ' ' in
+  print_endline "\027[2J"; (* Clears the screen *)
+  print_endline border;
+  for _ = 1 to 5 do
+    print_endline empty_line;
+  done;
+  print_endline ("*" ^ padding_left ^ message ^ padding_right ^ "*");
+  for _ = 1 to 5 do
+    print_endline empty_line;
+  done;
+  print_endline border
+
+(** [handle_end state] prints out the game over message *)
+let handle_end state = 
+  let end_reason = Struct.Game.check_reason_gameover state in
+  let winner = if state.side = White then "Black" else "White" in
+  let () = match end_reason with 
+  | Checkmate -> print_styled_message (Printf.sprintf "Checkmate: %s wins. The king is trapped and cannot escape. Game over." winner)
+  | Stalemate -> print_styled_message "Stalemate: No legal moves available. The game ends in a draw."
+  | FiftyMoves -> print_styled_message "Fifty Moves Rule: 50 moves have been made without a pawn move or capture. The game is a draw."
+  | InsufficientMaterial -> print_styled_message "Insufficient Material: Not enough pieces remain to checkmate. The game ends in a draw."
+  | Repetition -> print_styled_message "Repetition: The same position has been repeated three times. The game ends in a draw."
+  | GameInProgress -> print_endline "Game is still ongoing, not ended yet - an error occured"
+in failwith "Gameover"
 
 (** Handles the user input of a source square - which piece they want to move -
     and where - and returns the move they would like to make *)
@@ -181,6 +207,9 @@ let rec run_two_player state =
 
     let moves = Struct.Game.generate_moves state in
 
+    (* if no legal moves then end game otherwise continue *)
+    if (List.length moves = 0) then handle_end state else
+
     (* selected move *)
     let move = handle_input moves in
     let (legal, new_state, _) = Struct.Game.make_move state move in
@@ -193,11 +222,13 @@ let rec run_two_player state =
 
     run_two_player new_state
   with Failure f ->
-    (*handle exceptions*)
-    (* let () = print_endline "\x1Bc" in *)
+    (* handle game over*)
+    if String.equal f "Gameover" then exit 0 else
+ 
     let () = print_endline f in
     run_two_player state
 
+(* Checks to see if the bot was activated *)
 let () =
   if not bot_activated then run_two_player state
   else print_endline "Bot Activated!\n"
@@ -208,63 +239,62 @@ let bot_depth =
     Array.length Sys.argv < 3
     || not (List.mem Sys.argv.(2) [ "easy"; "medium"; "hard" ])
     (*default to easy*)
-  then 10
+  then 3
   else
     match String.trim (String.lowercase_ascii Sys.argv.(2)) with
-    | "easy" -> 10
-    | "medium" -> 20
-    | _ -> 30
+    | "easy" -> 3
+    | "medium" -> 5
+    | _ -> 7
 
 (* Configure the bot with the proper difficulty and evaluation function *)
 module BotSettings = struct
   let max_depth = bot_depth
-  let eval_function = Struct.Game.eval
 end
 
 (*Create Chess Bot module*)
 module ChessBot = InitBotWithSettings (BotSettings)
 
 let rec run_single_player state =
+
+  if (List.length (Struct.Game.generate_legal_moves state) = 0) then handle_end state else
+
   try
-    let () = print_board state in
+    if state.side = Black then
 
-    (* let () = for i = 0 to 11 do let () = Printf.printf "Bitboards " in let ()
-       = Printf.printf "%s\n" (to_piece i) in print_bitboard state.bitboards.(i)
-       done
+      let () = print_board state in
 
-       in
-
-       let () = for i = 0 to 2 do let () = Printf.printf "Occupations " in let
-       () = Printf.printf "%d\n" i in print_bitboard state.occupancies.(i) done
-
-       in *)
-    if state.side = White then
       let moves = Struct.Game.generate_moves state in
 
-      (* let () = Printf.printf "This is player whites moves\n" in let () =
-         Struct.Game.print_moves moves in let () = Printf.printf "\nEnd of
-         player white moves\n" in *)
-
-      (* selected move *)
+      (* select move *)
       let move = handle_input moves in
-      let () = Struct.Game.print_moves [ move ] in
-      let _, new_state, _ = Struct.Game.make_move state move in
 
-      run_single_player new_state
+      (* make psuedo legal move*)
+      let (legal, new_state, _) = Struct.Game.make_move state move in
+
+      (* check to see if the move puts the king in check *)
+      if not legal then (
+        Printf.printf
+          "You cannot move there, the king will be in check \n";
+          run_single_player state) 
+      else
+        run_single_player new_state
+
     else
-      let _, new_state, _ =
-        match ChessBot.get_action state with
-        | None -> failwith "BAD ACTION!"
-        | Some move ->
-            let () = Struct.Game.print_moves [ move ] in
-            Struct.Game.make_move state move
+
+      let best_move = ChessBot.get_next_move state in
+      let () = print_newline () in
+      let () = print_newline () in
+      let () = Struct.Game.print_moves [best_move] in
+      let () = Printf.printf "\nThe bot moved its %s from %s to %s \n" (to_piece (get_encoded_piece best_move)) (from_coord (get_source_coord best_move)) (from_coord (get_target_coord best_move)) in
+      let _, new_state, _ = Struct.Game.make_move state best_move
       in
 
       run_single_player new_state
   with Failure f ->
-    (*handle exceptions*)
-    (* let () = print_endline "\x1Bc" in *)
-    let () = print_endline f in
-    run_single_player state
+    (* handle game over*)
+    if String.equal f "Gameover" then exit 0 else
+ 
+      let () = print_endline f in
+      run_single_player state
 
 let () = run_single_player state
